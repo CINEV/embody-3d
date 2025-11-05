@@ -168,45 +168,6 @@ class BaseDataset(torch.utils.data.Dataset):
 
         return split_dataset
 
-
-    def _extract_annotations(
-        self, text_data: Dict[str, Any], annotation_keys: List[str], frame_index: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Extract all available annotations from text data.
-        
-        Args:
-            text_data: The text annotation dictionary
-            annotation_keys: List of annotation key strings to extract
-            frame_index: Optional frame index for frame-specific annotations
-            
-        Returns:
-            Dictionary mapping annotation keys to randomly selected annotation values
-        """
-        result = {}
-        
-        # Determine the source dictionary based on whether we have a frame_index
-        if frame_index is not None:
-            if frame_index not in text_data:
-                return result
-            source_data = text_data[frame_index]
-        else:
-            source_data = text_data
-            
-        # Extract each available annotation
-        for anno_key in annotation_keys:
-            if anno_key in source_data:
-                anno_value = source_data[anno_key]
-                # If it's a list with multiple annotations, randomly select one
-                if isinstance(anno_value, list) and len(anno_value) > 0:
-                    random_idx = np.random.randint(0, len(anno_value))
-                    result[anno_key] = anno_value[random_idx]
-                elif not isinstance(anno_value, list):
-                    # Single value (not a list)
-                    result[anno_key] = anno_value
-                # Skip empty lists
-                
-        return result
-
     def _get_chunk_data(
         self, subject_id: str, sequence_name: str, start_frame: int | None = None
     ) -> Dict[str, torch.Tensor]:
@@ -247,13 +208,14 @@ class BaseDataset(torch.utils.data.Dataset):
                 # sometimes the text annotations are not available just store an empty dict
                 # for instance, we don't annotate the first 10 seconds of the first sequence
                 # and there are cases where we don't annotate the end of the sequence
+                # NOTE: for the free form text, you will need to pad them such that they are the same length text
                 _data = _data.item()
                 if _data is None:
                     self.logger.warning("[dataloader.py] text not found for sequence")
-                    data[feat_name] = {}
+                    _data = ""
                 elif "overview" in _data:
                     # only broad annotations are given (not per subsection)
-                    data[feat_name] = {"overview": _data["overview"]}
+                    data[feat_name] = _data["overview"]
                 else:
                     # text annotations are stored in seconds at 10 second increments
                     seq_frames = sequence_name.split("--")[-1]
@@ -261,54 +223,28 @@ class BaseDataset(torch.utils.data.Dataset):
                     text_start_frame = int((start_frame / 30) // 10 * 10) * 30
                     text_frame_index = str(text_start_frame + seq_start_frame)
                     offset_in_seconds = (text_start_frame - start_frame) / 30
-                    
-                    # Define all frame-specific annotation keys to extract
-                    frame_annotation_keys = [
-                        FeatName.ANNO_POSTURE_SELECT.value,
-                        FeatName.ANNO_POSTURE_FREEFORM.value,
-                        FeatName.ANNO_RHYTHM_FREEFORM.value,
-                        FeatName.ANNO_RHYTHM_SELECT.value,
-                        FeatName.ANNO_MOOD_SELECT.value,
-                        FeatName.ANNO_MOOD_FREEFORM.value,
-                        FeatName.ANNO_MOVEMENT.value,
-                        FeatName.ANNO_ACTION.value,
-                        FeatName.ANNO_ACTIVE_PASSIVE.value,
-                        FeatName.ANNO_TOUCH_OBJECT.value,
-                        FeatName.ANNO_TOUCH_PERSON.value,
-                    ]
-                    
-                    # Extract all available annotations for this frame
-                    annotations_dict = self._extract_annotations(_data, frame_annotation_keys, text_frame_index)
-                    
-                    if not annotations_dict:
-                        self.logger.warning(f"[dataloader.py] no text annotations found at frame {text_frame_index}")
+                    anno_to_select = FeatName.ANNO_MOVEMENT.value
+                    if not text_frame_index in _data or anno_to_select not in _data[text_frame_index]:
+                        self.logger.warning(f"[dataloader.py] text '{anno_to_select}' not found; change hardcoding")
+                        _data = ""
                     else:
+                        random_idx = np.random.randint(0, len(_data[text_frame_index][anno_to_select]))
+                        _data = _data[text_frame_index][anno_to_select][random_idx]
                         data["text_offset_in_seconds"] = offset_in_seconds
-                        
-                    data[feat_name] = annotations_dict
+                    data[feat_name] = _data
             elif feat_name == FeatName.TEXT_HOLISTIC.value:
                 _data = _data.item()
                 if _data is None:
                     self.logger.warning("[dataloader.py] text not found for sequence")
-                    data[feat_name] = {}
+                    _data = ""
+                anno_to_select = FeatName.ANNO_SCENE_MOOD.value
+                if anno_to_select not in _data:
+                    self.logger.warning(f"[dataloader.py] text '{anno_to_select}' not found; change hardcoding")
+                    _data = ""
                 else:
-                    # Define all holistic annotation keys to extract
-                    holistic_annotation_keys = [
-                        FeatName.ANNO_SCENE_EXPLIANED.value,
-                        FeatName.ANNO_SCENE_MOOD_SELECT.value,
-                        FeatName.ANNO_SCENE_MOOD.value,
-                        FeatName.ANNO_SCENE_ATMOSPHERE_SELECT.value,
-                        FeatName.ANNO_SCENE_ATMOSPHERE.value,
-                        FeatName.ANNO_SCENE_RELATIONSHIP.value,
-                    ]
-                    
-                    # Extract all available holistic annotations
-                    annotations_dict = self._extract_annotations(_data, holistic_annotation_keys)
-                    
-                    if not annotations_dict:
-                        self.logger.warning("[dataloader.py] no holistic text annotations found")
-                        
-                    data[feat_name] = annotations_dict
+                    random_idx = np.random.randint(0, len(_data[anno_to_select]))
+                    _data = _data[anno_to_select][random_idx]
+                data[feat_name] = _data
             else:
                 # load all the other smplx body features
                 _data = _data[start_frame:end_frame]
