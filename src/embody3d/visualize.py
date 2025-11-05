@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 import trimesh
 from pyrender.constants import RenderFlags
-from load_obj import load_obj
+from embody3d.load_obj import load_obj
 
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 trimesh.util.log.setLevel("ERROR")

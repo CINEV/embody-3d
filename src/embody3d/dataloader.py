@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 import torchaudio
-from enums import FeatName
+from embody3d.enums import FeatName
 from tqdm import tqdm
 
 

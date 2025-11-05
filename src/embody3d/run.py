@@ -5,6 +5,30 @@ This source code is licensed under the license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+# Fix for numpy 2.x compatibility with PyOpenGL
+import sys
+if sys.version_info >= (3, 0):
+    import numpy as np
+    try:
+        # For numpy 2.x compatibility
+        if not hasattr(np, 'bool'):
+            np.bool = bool
+        if not hasattr(np, 'int'):
+            np.int = int
+        if not hasattr(np, 'float'):
+            np.float = float
+        if not hasattr(np, 'complex'):
+            np.complex = complex
+        if not hasattr(np, 'object'):
+            np.object = object
+        if not hasattr(np, 'str'):
+            np.str = str
+        if hasattr(np, 'unicode'):
+            if not hasattr(np, 'unicode'):
+                np.unicode = str
+    except Exception:
+        pass
+
 import argparse
 import os
 
@@ -12,11 +36,23 @@ import ffmpeg
 import smplx
 import torch
 import torchaudio
-from dataloader import BaseDataset
-from enums import FeatName
+from embody3d.dataloader import BaseDataset
+from embody3d.enums import FeatName
 from torch.utils.data import DataLoader
 from torchvision.io import write_video
-from visualize import PyrenderRenderer
+from embody3d.visualize import PyrenderRenderer
+import argparse
+import os
+
+import ffmpeg
+import smplx
+import torch
+import torchaudio
+from embody3d.dataloader import BaseDataset
+from embody3d.enums import FeatName
+from torch.utils.data import DataLoader
+from torchvision.io import write_video
+from embody3d.visualize import PyrenderRenderer
 
 
 def compute_lbs_from_batch(args, smplx_model, batch, smplx_keys):

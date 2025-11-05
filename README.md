@@ -4,6 +4,7 @@ Official repo for [Embody 3D dataset](https://www.meta.com/emerging-tech/codec-a
 Included in this repo:
 * 📝 [Overview](#overview): information about the dataset
 * ⏬ [Download Data](#download-data): scripts to obtain the full dataset or subsets of the dataset
+* 📦 [Installation](#installation): how to install and use the package
 * 🔖 [Dataset Description](#dataset-description): high level overview of how the dataset is formatted
 * 💻 [Explore the Dataset](#explore-the-dataset): tutorial for running a basic dataloader with the dataset and rendering videos
 
@@ -48,21 +49,61 @@ Once you have filled out the release form, you will get a list of 21 download li
 **Please copy the download links into a .txt file.**
 For instance, if you copy the links to a file `download.txt`, you can download the complete data by running the following:
 ```
-python src/download.py --src download.txt
+python -m embody3d.download --src download.txt
 ```
 
 If you want to download only certain features, you can set the flag `--feat`. For instance if you want to download only the text
 ```
-python src/download.py --src download.txt --feat text
+python -m embody3d.download --src download.txt --feat text
 ```
 
 Similarly, if you want to download only certain categories, you an set the flag `--category`. For instance, to just download charades,
 ```
-python src/download.py --src download.txt --category charades
+python -m embody3d.download --src download.txt --category charades
 ```
 
 >[!Tip]
 >You can further do more complex selections by combining the `--feat` and `--category` flags
+
+
+## Installation
+
+The Embody 3D package can be installed using `uv` (or `pip`) for use in your own projects.
+
+### Install for Development
+To install in editable mode (recommended for development):
+```bash
+uv pip install -e .
+```
+
+### Install as Package
+To install as a regular package:
+```bash
+uv pip install .
+```
+
+### Using as a Library
+Once installed, you can import and use the dataset classes in your own projects:
+```python
+from embody3d import BaseDataset, FeatName
+
+# Use BaseDataset in your code
+dataset = BaseDataset(
+    split="train",
+    data_dir=["path/to/data"],
+    features_to_load=[FeatName.BODY.value, FeatName.AUDIO_SEPARATED.value]
+)
+```
+
+### Running Scripts as Modules
+After installation, you can run the provided scripts as Python modules:
+```bash
+# Download data
+python -m embody3d.download --src download.txt
+
+# Run visualization
+python -m embody3d.run --data_path path/to/data --output_dir /tmp/
+```
 
 ## Dataset Description
 ### File Structure: how the data is laid out...
@@ -137,10 +178,10 @@ Make sure you also download the [smplx assets](https://smpl-x.is.tue.mpg.de/) wh
 
 Once you have downloaded the data, we provide an example dataloader along with a small visualization script for the dataset to render out the meshes with audio.
 ```
-python src/run.py \
+python -m embody3d.run \
     --smplx_model_path assets/smplx/smplx_models_lockedhead/ \
     --smplx_topology_path assets/smplx/smplx_mesh.obj \
-    --data_path <path_to_dataset>/acting/ \
+    --data_path datasets/acting/ \
     --output_dir /tmp/
 ```
 This will load the *acting* sequences and then save them to the `/tmp/` directory.
@@ -169,10 +210,10 @@ We provide additional functionality for the dataloader.
    However, since not all annotations are available for every section,
     the run file will print a warning when the asset is not found.
     ```
-    python src/run.py \
+    python -m embody3d.run \
         --smplx_model_path assets/smplx/smplx_models_lockedhead/ \
         --smplx_topology_path assets/smplx/smplx_mesh.obj \
-        --data_path <path_to_dataset>/acting/ \
+        --data_path datasets/acting/ \
         --output_dir /tmp/ \
         --anno text_annotations text_annotations_holistic audio_separated audio_raw \
         --load_multiperson
